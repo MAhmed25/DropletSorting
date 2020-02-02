@@ -11,7 +11,9 @@ using namespace cv;
 Mat backgroundMask(Mat theImage);	//returns a matrix which you can add to original image to remove
 									//the background
 
-void fourierFunction(Mat& imgToTransform);
+bool curveDetect(Mat& cellCurve, int span, int start, int threshold, int morphCols);
+
+Mat largeDotDetection(Mat& input);
 
 Mat shiftImage(Mat& img, int xShift, int yShift);
 
@@ -26,10 +28,8 @@ int main(int argc, char* argv[])
 
 	cout << inputVideoName << endl;
 	VideoCapture inputVideo(inputVideoName);
-	Mat inputFrames, thresholded, sobel, borderMask, labelled, backCurve, frontCurve, circles, sobelX, summed,
-		edgeSummed,
-		g1,g2, diff, dt, dots, finale;
-	
+	Mat inputFrames, thresholded, sobel, borderMask, backCurve, frontCurve, sobelX, summed,
+		edgeSummed, finale, largeDots;
 	
 
 	inputVideo >> inputFrames;
@@ -39,58 +39,14 @@ int main(int argc, char* argv[])
 	// borderMask = backgroundMask(inputFrames);
 
 	//All windows for the curve of the droplet
-	namedWindow("input", WINDOW_AUTOSIZE);
-
-	//namedWindow("Guassian_Blurred", WINDOW_AUTOSIZE);
-	//namedWindow("SobelX", WINDOW_AUTOSIZE);
-	namedWindow("Threshold", WINDOW_AUTOSIZE);
-	//namedWindow("difference", WINDOW_AUTOSIZE);
-
-	//namedWindow("G1", WINDOW_AUTOSIZE);
-	//namedWindow("G2", WINDOW_AUTOSIZE);
-	//namedWindow("ThresholdDifference", WINDOW_AUTOSIZE);
-	namedWindow("justDots", WINDOW_AUTOSIZE);
-
-	namedWindow("edgeSummed", WINDOW_AUTOSIZE);
+	namedWindow("input", WINDOW_AUTOSIZE); //Stores the input frame
 
 	namedWindow("finale", WINDOW_AUTOSIZE);
 
-	//namedWindow("lined", WINDOW_AUTOSIZE);
-
-	int numberOfCircles;
-
-	/*
-	cv::Mat morphCurves1 = (cv::Mat_<uchar>(9, 5) << 
-		1, 1, 1, 0, 0, 0, 0, 0, 0,
-		1, 1, 1, 0, 0, 0, 0, 0, 0,
-		0, 0, 1, 1, 1, 0, 0, 0, 0,
-		0, 0, 0, 0, 1, 1, 1, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 1, 1);
-
-	cv::Mat morphCurves2 = (cv::Mat_<uchar>(9, 5) <<
-		0, 0, 0, 0, 0, 0, 1, 1, 1,
-		0, 0, 0, 0, 0, 0, 1, 1, 1,
-		0, 0, 0, 0, 1, 1, 1, 0, 0,
-		0, 0, 1, 1, 1, 0, 0, 0, 0,
-		1, 1, 1, 0, 0, 0, 0, 0, 0);
-
-	cv::Mat morphCurves3 = (cv::Mat_<uchar>(9, 5) <<
-		0, 0, 0, 0, 0, 0, 1, 1, 1,
-		0, 0, 0, 0, 1, 1, 1, 0, 0,
-		0, 0, 1, 1, 1, 0, 0, 0, 0,
-		1, 1, 1, 0, 0, 0, 0, 0, 0,
-		1, 1, 1, 0, 0, 0, 0, 0, 0);
-
-	cv::Mat morphCurves4 = (cv::Mat_<uchar>(9, 5) <<
-		1, 1, 1, 0, 0, 0, 0, 0, 0,
-		0, 0, 1, 1, 1, 0, 0, 0, 0,
-		0, 0, 0, 0, 1, 1, 1, 0, 0,
-		0, 0, 0, 0, 0, 0, 1, 1, 1,
-		0, 0, 0, 0, 0, 0, 1, 1, 1);
-	*/
-
 	cv::Mat frontCurveMorph = imread(frontCellCurve, 0);
 	threshold(frontCurveMorph, frontCurveMorph, 250, 255, THRESH_BINARY);
+
+	int curveMorphSum = (int)sum(frontCurveMorph)[0];
 
 	cv::Mat backCurveMorph = imread(backCellCurve, 0);
 	threshold(backCurveMorph, backCurveMorph, 250, 255, THRESH_BINARY);
@@ -130,65 +86,78 @@ int main(int argc, char* argv[])
 		imshow("input", inputFrames);
 
 
-		// for detecting the larger circles
-		// First construction of a DoG filter
-		GaussianBlur(inputFrames, g1, Size(9, 9), 1, 1); 
-		//imshow("G1", g1);
+		/**********************************  Large Dot Detection  *************************************************/
+		// Detect the larger dots using a difference of gaussian filter and store in largeDots matrix
+		largeDots = largeDotDetection(inputFrames);
+		imshow("large circles dog detection", largeDots); // Displays the result
 
-		GaussianBlur(inputFrames, g2, Size(15, 15), 6, 6);
-		//imshow("G2", g2);
-
-		diff = (g1 - g2);
-		//imshow("difference", diff);
-		// end of DoG filterintg
-
-		// Threshold the result for the circles as they will have higher intensity
-		threshold(diff, dt, 40, 255, THRESH_BINARY);
-		//imshow("ThresholdDifference", dt);
-
-		// remove non-elliptic shapes
-		morphologyEx(dt, dots, MORPH_OPEN, ellipseMorph, Point(-1,-1), 1);
-		imshow("justDots", dots);
+		/**********************************************************************************************************/
 
 
-
+		/************************** Cell front and back curve detection********************************************/
 		Sobel(inputFrames, sobelX, CV_8U, 1, 0, 3); //standard Sobel in X direction
-		//imshow("SobelX", sobelX);
-
-		// Threshold result
+		// Threshold to convert to a binary format as well as remove small noise
 		threshold(sobelX, sobelX, 80, 255, THRESH_BINARY);
-		//imshow("Threshold", sobelX);
-		waitKey();
+
+		// Initialize the two matrices which will store the result of the morphological open operations
+		// We will perform to single out the front and back of the cell
 		frontCurve = cv::Mat::zeros(sobelX.size(), sobelX.type());
 		backCurve = cv::Mat::zeros(sobelX.size(), sobelX.type());
 
-		//attempt to remove curves which aren't correct needs to be made better with a bigger morphCurve kernel
-		//morphologyEx(sobelX, frontCurve, MORPH_OPEN, frontCurveMorph, Point(-1, -1), 1);
+		// Performs a morpholigical open, as well as using the opposite curve, i.e eroding with front, dilating with back
+		// To get the correct orientation on the reconstructed curve
+		// Front curve open operation
 		erode(sobelX, frontCurve, frontCurveMorph);
 		dilate(frontCurve, frontCurve, backCurveMorph);
-
+		imshow("Front Cell", frontCurve);
+		// Back curve open operation
 		erode(sobelX, backCurve, backCurveMorph);
 		dilate(backCurve, backCurve, frontCurveMorph);
+		imshow("Back Cell", backCurve);
+		// End result is 2 matrices which contain only the front and back curves of droplets
 
-		filter2D(inputFrames, edgeSummed, CV_8U, ellipses);
-		morphologyEx(edgeSummed, edgeSummed, MORPH_OPEN, squareMorph);
+
+		/**********************************************************************************************************/
+
+
+		/******* Temoprarily create the border mask by manually created lines to remove anything not in the *******/
+		/******************************************* Droplet Channel **********************************************/
 
 		borderMask = cv::Mat::zeros(cv::Size(256,256), CV_8U);
-
+		// Creates the north border
 		line(borderMask, Point(0, 60), Point(255, 60), Scalar(255), 2);
+		// Creates the south border
 		line(borderMask, Point(0, 209), Point(255, 209), Scalar(255), 2);
+		// Fills the north and south border to then later subtract from finale
 		floodFill(borderMask, Point(0, 0), Scalar(255));
 		floodFill(borderMask, Point(0, 255), Scalar(255));
-		imshow("lined", borderMask);
+		imshow("Border Mask", borderMask);
+		
+		/**********************************************************************************************************/
 
+
+		/********************* Detection of smaller dots using a elliptical edge detection kernel *****************/
+
+		// Filter with custom ellipse edge kernel
+		filter2D(inputFrames, edgeSummed, CV_8U, ellipses);
+
+		// Morph to remove any noise and keep significant gradients only (those which are elliptical in nature
+		// such as the small dots
+		morphologyEx(edgeSummed, edgeSummed, MORPH_OPEN, squareMorph);
+
+		// Convert to binary to remove noise and leave just the dots
 		threshold(edgeSummed, edgeSummed, 130, 255, THRESH_BINARY);
-		edgeSummed = edgeSummed - borderMask;
-		imshow("edgeSummed", edgeSummed);
+		imshow("small Dots", edgeSummed);
 
-		finale = edgeSummed + dots + frontCurve + backCurve;
+		/********************************************************************************************************/
+
+		/*************************************** Create the final matrix ****************************************/
+		finale = edgeSummed + largeDots + frontCurve + backCurve - borderMask;
 		imshow("finale", finale);
 
-		waitKey(4); //perform these operations once every 4s
+		cout << "new cell?: " << curveDetect(frontCurve, 36, 0, curveMorphSum, (int)frontCurveMorph.cols) << endl;
+
+		waitKey(); //perform these operations once every 4s
 		inputVideo >> inputFrames;
 		cvtColor(inputFrames, inputFrames, COLOR_BGR2GRAY);
 	}
@@ -345,7 +314,7 @@ Mat backgroundMask(Mat theImage)
 	return backGroundMask;
 };
 
-// Does not wrap around
+// Does not wrap around shifts matrix in x and y direction
 Mat shiftImage(Mat& img, int xShift, int yShift) 
 {
 	Mat shiftedImg = cv::Mat::zeros(img.size(), img.type());
@@ -372,4 +341,48 @@ Mat shiftImage(Mat& img, int xShift, int yShift)
 	}
 
 	return shiftedXImg;
+}
+
+// Returns the result of the Difference-of-guassian filter for large dot detection
+Mat largeDotDetection(Mat& input)
+{
+	Mat g1, g2, diff;
+
+	GaussianBlur(input, g1, Size(9, 9), 1, 1);
+	GaussianBlur(input, g2, Size(15, 15), 6, 6);
+
+	diff = g1 - g2;
+	// Threshold the result for the circles as they will have higher intensity
+	threshold(diff, diff, 40, 255, THRESH_BINARY);
+	// Remove any non-elliptical shapes through a morph open 
+	morphologyEx(diff, diff, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)), Point(-1, -1), 1);
+
+	// Return the large dot
+	return diff;
+}
+
+bool curveDetect(Mat& cellCurve, int span, int start, int threshold, int morphCols)
+{
+	// Detecting if a new droplet is incoming will be done by calculating average of
+	// the span width and see if it greater than some value in which case
+	// We know a new cell is incoming
+	// Consider that worst case scenario, value returned by front curve morph
+	// will be just a thin curve assuming the morph only finds 1 matching type
+	if (span < morphCols)
+	{ 
+		cout << "Warning; your span is shorter than"
+		"your morph matrix column width will lead to errors" << endl; 
+	}
+	
+	// Calculate sum of span columns starting from left
+	int spanSum = 0;
+	for (int i = start; i < start+span; i++)
+	{
+		for (int j = 0; j < cellCurve.rows; j++)
+		{
+			spanSum += (int)cellCurve.at<uchar>(j, i);
+		}
+	}
+
+	return spanSum > threshold ? true : false;
 }
