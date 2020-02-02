@@ -13,6 +13,8 @@ Mat backgroundMask(Mat theImage);	//returns a matrix which you can add to origin
 
 void fourierFunction(Mat& imgToTransform);
 
+Mat shiftImage(Mat& img, int xShift, int yShift);
+
 int findCircles(vector<vector<Point>>& contours, Mat &referenceImage);
 
 int main(int argc, char* argv[])
@@ -27,32 +29,30 @@ int main(int argc, char* argv[])
 
 	inputVideo >> inputFrames;
 
-	int width = inputFrames.cols;
-	int height = inputFrames.rows;
-
 	cvtColor(inputFrames, inputFrames, COLOR_BGR2GRAY);
 
 	// borderMask = backgroundMask(inputFrames);
 
 	//All windows for the curve of the droplet
 	namedWindow("input", WINDOW_AUTOSIZE);
-	namedWindow("Guassian_Blurred", WINDOW_AUTOSIZE);
-	namedWindow("SobelX", WINDOW_AUTOSIZE);
-	namedWindow("Threshold", WINDOW_AUTOSIZE);
-	namedWindow("difference", WINDOW_AUTOSIZE);
 
-	namedWindow("G1", WINDOW_AUTOSIZE);
-	namedWindow("G2", WINDOW_AUTOSIZE);
-	namedWindow("ThresholdDifference", WINDOW_AUTOSIZE);
+	//namedWindow("Guassian_Blurred", WINDOW_AUTOSIZE);
+	//namedWindow("SobelX", WINDOW_AUTOSIZE);
+	//namedWindow("Threshold", WINDOW_AUTOSIZE);
+	//namedWindow("difference", WINDOW_AUTOSIZE);
+
+	//namedWindow("G1", WINDOW_AUTOSIZE);
+	//namedWindow("G2", WINDOW_AUTOSIZE);
+	//namedWindow("ThresholdDifference", WINDOW_AUTOSIZE);
 	namedWindow("justDots", WINDOW_AUTOSIZE);
 
-
+	/*
 	namedWindow("edge1", WINDOW_AUTOSIZE);
 	namedWindow("edge2", WINDOW_AUTOSIZE);
 	namedWindow("edge3", WINDOW_AUTOSIZE);
 	namedWindow("edge4", WINDOW_AUTOSIZE);
+	*/
 	namedWindow("edgeSummed", WINDOW_AUTOSIZE);
-
 
 	namedWindow("finale", WINDOW_AUTOSIZE);
 
@@ -117,13 +117,13 @@ int main(int argc, char* argv[])
 
 	Mat_<int> ellipsess(7, 7);
 	ellipsess <<
-		0, 0, 0, -1, 0, 0, 0,
-		0, 0, -1, 1, -1, 0, 0,
-		0, -1, 1, 1, 1, -1, 0,
-		-1, 1, 1, 0, 1, 1, -1,
-		0, -1, 1, 1, 1, -1, 0,
-		0, 0, -1, 1, -1, 0, 0,
-		0, 0, 0, -1, 0, 0, 0;
+		  0,  0,  0, -1,  0,  0,  0,
+		  0,  0, -1,  1, -1,  0,  0,
+		  0, -1,  1,  1,  1, -1,  0,
+		 -1,  1,  1,  0,  1,  1, -1,
+		  0, -1,  1,  1,  1, -1,  0,
+		  0,  0, -1,  1, -1,  0,  0,
+		  0,  0,  0, -1,  0,  0,  0;
 
 
 
@@ -133,27 +133,29 @@ int main(int argc, char* argv[])
 	sobelMinusX << 1, 0, -1, 2, 0, -2, 1, 0, -1;
 
 	vector<vector<Point>> contours;
+	waitKey();
 
 	while (!inputFrames.empty())
 	{
+
 		imshow("input", inputFrames);
 
 
 		// for detecting the larger circles
 		// First construction of a DoG filter
 		GaussianBlur(inputFrames, g1, Size(9, 9), 1, 1); 
-		imshow("G1", g1);
+		//imshow("G1", g1);
 
 		GaussianBlur(inputFrames, g2, Size(15, 15), 6, 6);
-		imshow("G2", g2);
+		//imshow("G2", g2);
 
 		diff = (g1 - g2);
-		imshow("difference", diff);
+		//imshow("difference", diff);
 		// end of DoG filterintg
 
 		// Threshold the result for the circles as they will have higher intensity
 		threshold(diff, dt, 40, 255, THRESH_BINARY);
-		imshow("ThresholdDifference", dt);
+		//imshow("ThresholdDifference", dt);
 
 		// remove non-elliptic shapes
 		morphologyEx(dt, dots, MORPH_OPEN, ellipseMorph, Point(-1,-1), 1);
@@ -162,24 +164,25 @@ int main(int argc, char* argv[])
 
 		// For the edges of the circle
 		GaussianBlur(inputFrames, inputFrames, Size(9, 9), 1,1);
-		imshow("Guassian_Blurred", inputFrames);
+		//imshow("Guassian_Blurred", inputFrames);
 
 		Sobel(inputFrames, sobelX, CV_8U, 1, 0, 3); //standard Sobel in X direction
-		imshow("SobelX", sobelX);
+		//imshow("SobelX", sobelX);
 
 		// Threshold result
 		threshold(sobelX, Curves, 80, 255, THRESH_BINARY);
-		imshow("Threshold", Curves);
+		//imshow("Threshold", Curves);
 
 		//attempt to remove curves which aren't correct needs to be made better with a bigger morphCurve kernel
 		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves1, Point(-1, -1), 8);
 		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves2, Point(-1,-1), 8);
 		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves3, Point(-1, -1), 8);
 		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves4, Point(-1, -1), 8);
-		imshow("closed", Curves);
+		//imshow("closed", Curves);
 
 
-		// For the smaller circles.
+		// For the smaller circles not used
+		/*
 		filter2D(inputFrames, edge1Mat, CV_8U, edge1);
 		imshow("edge1", edge1Mat);
 
@@ -191,6 +194,7 @@ int main(int argc, char* argv[])
 
 		filter2D(inputFrames, edge4Mat, CV_8U, edge4);
 		imshow("edge4", edge4Mat);
+		*/
 
 		filter2D(inputFrames, edgeSummed, CV_8U, ellipsess);
 		
@@ -202,23 +206,14 @@ int main(int argc, char* argv[])
 		floodFill(borderMask, Point(0, 255), Scalar(255));
 		imshow("lined", borderMask);
 
-		threshold(edgeSummed, edgeSummed, 160, 255, THRESH_BINARY);
+		threshold(edgeSummed, edgeSummed, 150, 255, THRESH_BINARY);
 		edgeSummed = edgeSummed - borderMask;
 		imshow("edgeSummed", edgeSummed);
 
-		finale = edgeSummed + dots - Curves;
+		finale = edgeSummed + dots + Curves;
 		imshow("finale", finale);
 
-		/*
-		findContours(sobel, contours, RETR_LIST, CHAIN_APPROX_NONE);
-
-		numberOfCircles = findCircles(contours, sobel);
-
-		cout << "Number of circles = " << numberOfCircles << endl;
-		*/
-
-
-		waitKey(4); //perform these operations once every 4s
+		waitKey(); //perform these operations once every 4s
 		inputVideo >> inputFrames;
 		cvtColor(inputFrames, inputFrames, COLOR_BGR2GRAY);
 	}
@@ -331,9 +326,9 @@ int main(int argc, char* argv[])
 }
 
 /* creates the background mask */
+// No longer actually used
 Mat backgroundMask(Mat theImage)
 {
-
 	Mat_<float> kernelsobelY(3, 3), negKernelSobelY(3, 3);
 	kernelsobelY << -3, -1, -3, 0, 0, 0, 3, 1, 3;
 	negKernelSobelY << 3, 1, 3, 0, 0, 0, -3, -1, -3;
@@ -375,54 +370,31 @@ Mat backgroundMask(Mat theImage)
 	return backGroundMask;
 };
 
-
-void fourierFunction(Mat& imgToTransform)
+// Does not wrap around
+Mat shiftImage(Mat& img, int xShift, int yShift) 
 {
-	Mat padded;                            //expand input image to optimal size
-	int m = getOptimalDFTSize(imgToTransform.rows);
-	int n = getOptimalDFTSize(imgToTransform.cols); // on the border add zero values
-	copyMakeBorder(imgToTransform, padded, 0, m - imgToTransform.rows, 0, n - imgToTransform.cols, BORDER_CONSTANT, Scalar::all(0));
+	Mat shiftedImg = cv::Mat::zeros(img.size(), img.type());
+	
+	// Bound xShift and yShift to img limits.
 
-	Mat planes[] = { Mat_<float>(padded), Mat::zeros(padded.size(), CV_32F) };
-	Mat complexI;
-	merge(planes, 2, complexI);         // Add to the expanded another plane with zeros
+	xShift = std::max(-img.cols, std::min(xShift, img.cols));
+	yShift = std::max(-img.rows, std::min(yShift, img.rows));
 
-	dft(complexI, complexI);            // this way the result may fit in the source matrix
+	for (int i = 0; i < (img.cols - (int)abs(xShift)); i++)
+	{
+		xShift < 0 ? img.col(img.cols - i - 1).copyTo(shiftedImg.col(shiftedImg.cols + xShift - i - 1)) // if negative, copy right to left
+			: img.col(i).copyTo(shiftedImg.col(xShift + i)); // if positive, copy left to right
+	}
+	
+	// to store the intermediate xShifted image
+	// in preparation for yShift
+	Mat shiftedXImg = cv::Mat::zeros(img.size(), img.type());
 
-	// compute the magnitude and switch to logarithmic scale
-	// => log(1 + sqrt(Re(DFT(I))^2 + Im(DFT(I))^2))
-	split(complexI, planes);                   // planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
-	magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
-	Mat magI = planes[0];
+	for (int i = 0; i < (shiftedImg.rows - (int)abs(yShift)); i++)
+	{
+		yShift < 0 ? shiftedImg.row(shiftedImg.rows - i - 1).copyTo(shiftedXImg.row(shiftedXImg.rows + yShift - i - 1)) // if negative, copy bottom to top
+			: shiftedImg.row(i).copyTo(shiftedXImg.row(yShift + i)); // if positive, copy top to bottom
+	}
 
-	magI += Scalar::all(1);                    // switch to logarithmic scale
-	log(magI, magI);
-
-	// crop the spectrum, if it has an odd number of rows or columns
-	magI = magI(Rect(0, 0, magI.cols & -2, magI.rows & -2));
-
-	// rearrange the quadrants of Fourier image  so that the origin is at the image center
-	int cx = magI.cols / 2;
-	int cy = magI.rows / 2;
-
-	Mat q0(magI, Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant
-	Mat q1(magI, Rect(cx, 0, cx, cy));  // Top-Right
-	Mat q2(magI, Rect(0, cy, cx, cy));  // Bottom-Left
-	Mat q3(magI, Rect(cx, cy, cx, cy)); // Bottom-Right
-
-	Mat tmp;                           // swap quadrants (Top-Left with Bottom-Right)
-	q0.copyTo(tmp);
-	q3.copyTo(q0);
-	tmp.copyTo(q3);
-
-	q1.copyTo(tmp);                    // swap quadrant (Top-Right with Bottom-Left)
-	q2.copyTo(q1);
-	tmp.copyTo(q2);
-
-	normalize(magI, magI, 0, 1, NORM_MINMAX); // Transform the matrix with float values into a
-											// viewable image form (float between values 0 and 1).
-
-	imshow("Input Image", imgToTransform);    // Show the result
-	imshow("spectrum magnitude", magI);
-
+	return shiftedXImg;
 }
