@@ -1,4 +1,4 @@
 ﻿  CellularAutomata.cpp
-C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(61,6): warning C4101: 'numberOfCircles': unreferenced local variable
-C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(325,68): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(60,6): warning C4101: 'numberOfCircles': unreferenced local variable
+C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(301,68): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
   CellularAutomata.vcxproj -> C:\Users\Mazdo\source\repos\CellularAutomata\x64\Debug\CellularAutomata.exe

@@ -19,13 +19,18 @@ int findCircles(vector<vector<Point>>& contours, Mat &referenceImage);
 
 int main(int argc, char* argv[])
 {
-	const char* inputVideoName = "videos/cell2.avi";
+	const char* inputVideoName = "images/cell2.avi";
+	const char* frontCellCurve = "images/frontCellCurve.png";
+	const char* backCellCurve = "images/backCellCurve.png";
+
 
 	cout << inputVideoName << endl;
 	VideoCapture inputVideo(inputVideoName);
-	Mat inputFrames, thresholded, sobel, borderMask, labelled, Curves, circles, sobelX, summed, edge1Mat,edge2Mat, edge3Mat, edge4Mat,
+	Mat inputFrames, thresholded, sobel, borderMask, labelled, backCurve, frontCurve, circles, sobelX, summed,
 		edgeSummed,
 		g1,g2, diff, dt, dots, finale;
+	
+	
 
 	inputVideo >> inputFrames;
 
@@ -38,7 +43,7 @@ int main(int argc, char* argv[])
 
 	//namedWindow("Guassian_Blurred", WINDOW_AUTOSIZE);
 	//namedWindow("SobelX", WINDOW_AUTOSIZE);
-	//namedWindow("Threshold", WINDOW_AUTOSIZE);
+	namedWindow("Threshold", WINDOW_AUTOSIZE);
 	//namedWindow("difference", WINDOW_AUTOSIZE);
 
 	//namedWindow("G1", WINDOW_AUTOSIZE);
@@ -46,12 +51,6 @@ int main(int argc, char* argv[])
 	//namedWindow("ThresholdDifference", WINDOW_AUTOSIZE);
 	namedWindow("justDots", WINDOW_AUTOSIZE);
 
-	/*
-	namedWindow("edge1", WINDOW_AUTOSIZE);
-	namedWindow("edge2", WINDOW_AUTOSIZE);
-	namedWindow("edge3", WINDOW_AUTOSIZE);
-	namedWindow("edge4", WINDOW_AUTOSIZE);
-	*/
 	namedWindow("edgeSummed", WINDOW_AUTOSIZE);
 
 	namedWindow("finale", WINDOW_AUTOSIZE);
@@ -60,6 +59,7 @@ int main(int argc, char* argv[])
 
 	int numberOfCircles;
 
+	/*
 	cv::Mat morphCurves1 = (cv::Mat_<uchar>(9, 5) << 
 		1, 1, 1, 0, 0, 0, 0, 0, 0,
 		1, 1, 1, 0, 0, 0, 0, 0, 0,
@@ -87,6 +87,15 @@ int main(int argc, char* argv[])
 		0, 0, 0, 0, 1, 1, 1, 0, 0,
 		0, 0, 0, 0, 0, 0, 1, 1, 1,
 		0, 0, 0, 0, 0, 0, 1, 1, 1);
+	*/
+
+	cv::Mat frontCurveMorph = imread(frontCellCurve, 0);
+	threshold(frontCurveMorph, frontCurveMorph, 250, 255, THRESH_BINARY);
+
+	cv::Mat backCurveMorph = imread(backCellCurve, 0);
+	threshold(backCurveMorph, backCurveMorph, 250, 255, THRESH_BINARY);
+
+	cv::Mat squareMorph = cv::Mat::ones(cv::Size(3, 3), CV_8U);
 
 	cv::Mat morphLineErosion = (cv::Mat_<uchar>(5, 5) <<
 		0, 0, 0, 0, 0,
@@ -95,28 +104,8 @@ int main(int argc, char* argv[])
 		0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0);
 
-	Mat_<int> edge1(3, 3);
-	edge1 << 2, 2, -1, 
-			 2, -1, -1, 
-			-1, -1, -1;
-
-	Mat_<int> edge2(3, 3);
-	edge2 << -1, 2, 2,
-			-1, -1, 2,
-			-1, -1, -1;
-
-	Mat_<int> edge3(3, 3);
-	edge3 << -1, -1, -1,
-			 -1, -1, 2,
-			 -1, 2, 2;
-
-	Mat_<int> edge4(3, 3);
-	edge4 << -1, -1, -1,
-			 2, -1, -1,
-			 2, 2, -1;
-
-	Mat_<int> ellipsess(7, 7);
-	ellipsess <<
+	Mat_<int> ellipses(7, 7);
+	ellipses <<
 		  0,  0,  0, -1,  0,  0,  0,
 		  0,  0, -1,  1, -1,  0,  0,
 		  0, -1,  1,  1,  1, -1,  0,
@@ -162,42 +151,29 @@ int main(int argc, char* argv[])
 		imshow("justDots", dots);
 
 
-		// For the edges of the circle
-		GaussianBlur(inputFrames, inputFrames, Size(9, 9), 1,1);
-		//imshow("Guassian_Blurred", inputFrames);
 
 		Sobel(inputFrames, sobelX, CV_8U, 1, 0, 3); //standard Sobel in X direction
 		//imshow("SobelX", sobelX);
 
 		// Threshold result
-		threshold(sobelX, Curves, 80, 255, THRESH_BINARY);
-		//imshow("Threshold", Curves);
+		threshold(sobelX, sobelX, 80, 255, THRESH_BINARY);
+		imshow("Threshold", sobelX);
+		waitKey();
+		frontCurve = cv::Mat::zeros(sobelX.size(), sobelX.type());
+		backCurve = cv::Mat::zeros(sobelX.size(), sobelX.type());
 
 		//attempt to remove curves which aren't correct needs to be made better with a bigger morphCurve kernel
-		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves1, Point(-1, -1), 8);
-		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves2, Point(-1,-1), 8);
-		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves3, Point(-1, -1), 8);
-		morphologyEx(Curves, Curves, MORPH_CLOSE, morphCurves4, Point(-1, -1), 8);
-		//imshow("closed", Curves);
+		//morphologyEx(sobelX, frontCurve, MORPH_OPEN, frontCurveMorph, Point(-1, -1), 1);
+		erode(sobelX, frontCurve, frontCurveMorph);
+		dilate(frontCurve, frontCurve, backCurveMorph);
 
+		erode(sobelX, backCurve, backCurveMorph);
+		dilate(backCurve, backCurve, frontCurveMorph);
 
-		// For the smaller circles not used
-		/*
-		filter2D(inputFrames, edge1Mat, CV_8U, edge1);
-		imshow("edge1", edge1Mat);
+		filter2D(inputFrames, edgeSummed, CV_8U, ellipses);
+		morphologyEx(edgeSummed, edgeSummed, MORPH_OPEN, squareMorph);
+		imshow("edgeSummedpre", edgeSummed);
 
-		filter2D(inputFrames, edge2Mat, CV_8U, edge2);
-		imshow("edge2", edge2Mat);
-
-		filter2D(inputFrames, edge3Mat, CV_8U, edge3);
-		imshow("edge3", edge3Mat);
-
-		filter2D(inputFrames, edge4Mat, CV_8U, edge4);
-		imshow("edge4", edge4Mat);
-		*/
-
-		filter2D(inputFrames, edgeSummed, CV_8U, ellipsess);
-		
 		borderMask = cv::Mat::zeros(cv::Size(256,256), CV_8U);
 
 		line(borderMask, Point(0, 60), Point(255, 60), Scalar(255), 2);
@@ -210,10 +186,10 @@ int main(int argc, char* argv[])
 		edgeSummed = edgeSummed - borderMask;
 		imshow("edgeSummed", edgeSummed);
 
-		finale = edgeSummed + dots + Curves;
+		finale = edgeSummed + dots + frontCurve + backCurve;
 		imshow("finale", finale);
 
-		waitKey(); //perform these operations once every 4s
+		waitKey(4); //perform these operations once every 4s
 		inputVideo >> inputFrames;
 		cvtColor(inputFrames, inputFrames, COLOR_BGR2GRAY);
 	}
@@ -326,7 +302,7 @@ int main(int argc, char* argv[])
 }
 
 /* creates the background mask */
-// No longer actually used
+// No longer actually used needs more work
 Mat backgroundMask(Mat theImage)
 {
 	Mat_<float> kernelsobelY(3, 3), negKernelSobelY(3, 3);
