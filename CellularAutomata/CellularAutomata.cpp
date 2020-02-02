@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 
 		// Threshold result
 		threshold(sobelX, sobelX, 80, 255, THRESH_BINARY);
-		imshow("Threshold", sobelX);
+		//imshow("Threshold", sobelX);
 		waitKey();
 		frontCurve = cv::Mat::zeros(sobelX.size(), sobelX.type());
 		backCurve = cv::Mat::zeros(sobelX.size(), sobelX.type());
@@ -172,7 +172,6 @@ int main(int argc, char* argv[])
 
 		filter2D(inputFrames, edgeSummed, CV_8U, ellipses);
 		morphologyEx(edgeSummed, edgeSummed, MORPH_OPEN, squareMorph);
-		imshow("edgeSummedpre", edgeSummed);
 
 		borderMask = cv::Mat::zeros(cv::Size(256,256), CV_8U);
 
@@ -182,7 +181,7 @@ int main(int argc, char* argv[])
 		floodFill(borderMask, Point(0, 255), Scalar(255));
 		imshow("lined", borderMask);
 
-		threshold(edgeSummed, edgeSummed, 150, 255, THRESH_BINARY);
+		threshold(edgeSummed, edgeSummed, 130, 255, THRESH_BINARY);
 		edgeSummed = edgeSummed - borderMask;
 		imshow("edgeSummed", edgeSummed);
 
