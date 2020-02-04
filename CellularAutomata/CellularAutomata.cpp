@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 
-const int cellVelocity = 26;
+const int cellVelocity = 24;
 
 Mat backgroundMask(Mat theImage);	//returns a matrix which you can add to original image to remove
 									//the background
@@ -19,11 +19,13 @@ int findPosFirstWhite(Mat& frontCurve);
 
 Mat largeDotDetection(Mat& input);
 
-Mat shiftImage(Mat& img, int xShift, int yShift);
+void shiftImage(Mat& img, int xShift, int yShift);
 
-Mat integrateMatrices(Mat& accumalator, Mat& next);
+void integrateMatrices(Mat& accumalator, Mat& next);
 
 int findCircles(vector<vector<Point>>& contours, Mat &referenceImage);
+
+void adjustDivider(Mat& divider, int dividerXPos);
 
 int main(int argc, char* argv[])
 {
@@ -171,30 +173,31 @@ int main(int argc, char* argv[])
 
 		/*************************************** Create the final matrix ****************************************/
 
-		if (!finale.empty()){ accumalator = finale; }
-		imshow("accumalator", accumalator);
-
 		finale = smallDots + largeDots;
 		bitwise_and(finale, test, finale);
 		finale += frontCurve + backCurve;
 
-		imshow("finale", finale);
+		dividerXPos += cellVelocity;
+		adjustDivider(divider, dividerXPos);
+		bitwise_and(divider, finale, finale);
+
+		integrateMatrices(accumalator, finale);
 
 		// New cell detected
 
 		if (curveDetect(frontCurve, frontCurveMorph.cols * 1.5, 0, curveMorphSum, frontCurveMorph.cols))
 		{
 			int x = findPosFirstWhite(frontCurve);
+			cout << x << endl;
 			dividerXPos = x;
-			line(divider, Point(x, 0), Point(x, 255), 255);
-			floodFill(divider, Point(0, 0), 255);
+			adjustDivider(divider, dividerXPos);
 			bitwise_and(divider, finale, finale);
 			accumalator = cv::Mat::zeros(accumalator.size(), accumalator.type());
 		}
 
 		imshow("divider", divider);
-		dividerXPos += cellVelocity;
-
+		imshow("finale", finale);
+		imshow("accumalator", accumalator);
 
 		waitKey(); //perform these operations once every 4s
 		inputVideo >> inputFrames;
@@ -206,7 +209,7 @@ int main(int argc, char* argv[])
 
  
 // Does not wrap around shifts matrix in x and y direction
-Mat shiftImage(Mat& img, int xShift, int yShift) 
+void shiftImage(Mat& img, int xShift, int yShift) 
 {
 	Mat shiftedImg = cv::Mat::zeros(img.size(), img.type());
 	
@@ -231,7 +234,7 @@ Mat shiftImage(Mat& img, int xShift, int yShift)
 			: shiftedImg.row(i).copyTo(shiftedXImg.row(yShift + i)); // if positive, copy top to bottom
 	}
 
-	return shiftedXImg;
+	img = shiftedXImg;
 }
 
 // Returns the result of the Difference-of-guassian filter for large dot detection
@@ -297,9 +300,18 @@ int findPosFirstWhite(Mat& frontCurve)
 	return -1; // None found should not happen....
 }
 
-Mat integrateMatrices(Mat& accumalator, Mat& next)
+void integrateMatrices(Mat& accumalator, Mat& next)
 {
-	return next + shiftImage(accumalator, cellVelocity, 0);
+	shiftImage(accumalator, cellVelocity, 0);
+	imshow("acumshifted", accumalator);
+	accumalator = next + accumalator;
+}
+
+void adjustDivider(Mat& divider, int dividerXPos)
+{
+	divider = cv::Mat::zeros(divider.size(), divider.type());
+	line(divider, Point(dividerXPos, 0), Point(dividerXPos, 255), 255);
+	floodFill(divider, Point(0, 0), 255);
 }
 
 
