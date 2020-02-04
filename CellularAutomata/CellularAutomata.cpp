@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 
-const int cellVelocity = 24;
+const int cellVelocity = 26;
 
 Mat backgroundMask(Mat theImage);	//returns a matrix which you can add to original image to remove
 									//the background
@@ -115,7 +115,6 @@ int main(int argc, char* argv[])
 
 		imshow("input", inputFrames);
 		threshold(inputFrames, test, 70, 255, THRESH_BINARY_INV);
-		imshow("threshbin", test);
 
 		/**********************************  Large Dot Detection  *************************************************/
 		// Detect the larger dots using a difference of gaussian filter and store in largeDots matrix
@@ -160,6 +159,7 @@ int main(int argc, char* argv[])
 		morphologyEx(smallDots, smallDots, MORPH_OPEN, squareMorph);
 		// Convert to binary to remove noise and leave just the dots
 		smallDots = largeDotDetection(smallDots);
+		imshow("Small Dots", smallDots);
 
 		threshold(smallDots, smallDots, 155, 255, THRESH_BINARY);
 

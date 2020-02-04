@@ -1,4 +1,4 @@
 ﻿  CellularAutomata.cpp
-C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(190,52): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(466,67): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(188,52): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\Users\Mazdo\source\repos\CellularAutomata\CellularAutomata\CellularAutomata.cpp(464,67): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
   CellularAutomata.vcxproj -> C:\Users\Mazdo\source\repos\CellularAutomata\x64\Debug\CellularAutomata.exe
